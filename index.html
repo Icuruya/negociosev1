@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Interactivo de Ingeniería de Procesos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Corporate Calm -->
+    <!-- Application Structure Plan: La aplicación está estructurada en dos secciones principales que reflejan el informe original: "Fundamentos" y "Caso Práctico". Esta división lógica permite a los usuarios explorar primero los conceptos teóricos y luego ver su aplicación práctica. La navegación es una barra superior fija que permite un desplazamiento suave a cualquier sección, mejorando la usabilidad en una página con contenido extenso. Se utilizan elementos interactivos como tarjetas expandibles y diagramas visuales (construidos con HTML/CSS) para presentar la información de manera más atractiva y menos densa que un informe de texto, fomentando la exploración y la comprensión. La estructura está diseñada para contar una historia: problema -> teoría -> solución -> impacto. -->
+    <!-- Visualization & Content Choices: 
+        - 10 Problemas de Procesos: Report Info -> 10 ideas recurrentes. Goal -> Organizar/Informar. Viz -> Cuadrícula de tarjetas interactivas. Interaction -> Clic para expandir. Justification -> Evita un muro de texto, permite al usuario enfocarse en un problema a la vez. Library/Method -> HTML/CSS/JS.
+        - Cadena de Valor (Coca-Cola): Report Info -> Análisis de la cadena de valor. Goal -> Organizar/Informar. Viz -> Diagrama visual con HTML/CSS. Interaction -> Hover para destacar. Justification -> Muestra la relación entre actividades primarias y de apoyo de forma más clara que el texto. Library/Method -> HTML/CSS (Tailwind).
+        - Proceso Antes/Después: Report Info -> Diagramas de flujo. Goal -> Comparar/Cambio. Viz -> Diagramas de flujo lado a lado. Interaction -> Estático con fuerte codificación visual (colores, iconos). Justification -> Visualiza dramáticamente la mejora del proceso. Library/Method -> HTML/CSS (Tailwind).
+        - Impacto del Cambio (Gráfico): Report Info -> Reducción del ciclo de 50 a 7 días. Goal -> Comparar/Informar. Viz -> Gráfico de barras horizontal. Interaction -> Tooltips al pasar el ratón. Justification -> Cuantifica el éxito de la reingeniería de forma inmediata y visualmente impactante. Library/Method -> Chart.js.
+        - Diagrama de Ishikawa: Report Info -> Análisis de causa y efecto. Goal -> Relaciones. Viz -> Diagrama de espina de pescado. Interaction -> Estático. Justification -> Representa la compleja relación entre causas y efectos de una manera estándar y fácilmente reconocible. Library/Method -> HTML/CSS (Tailwind).
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #334155; /* slate-700 */
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #0d9488; /* teal-600 */
+            border-bottom-color: #0d9488; /* teal-600 */
+        }
+        .card-flip {
+            perspective: 1000px;
+        }
+        .card-flip-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .card-flip:hover .card-flip-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.75rem;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .ishikawa-line {
+            position: absolute;
+            background-color: #475569; /* slate-600 */
+        }
+        .ishikawa-bone {
+            transform-origin: left center;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header & Navigation -->
+    <header id="header" class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="#hero" class="text-xl md:text-2xl font-bold text-teal-700">Optimización de Procesos</a>
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="#fundamentos" class="nav-link font-medium pb-1">Fundamentos</a>
+                <a href="#caso-practico" class="nav-link font-medium pb-1">Caso Práctico: Coca-Cola</a>
+            </div>
+            <button id="mobile-menu-button" class="md:hidden p-2 rounded-md text-slate-600 hover:bg-slate-100">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-4 6h4" />
+                </svg>
+            </button>
+        </nav>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-slate-200">
+            <a href="#fundamentos" class="block py-3 px-4 text-base text-slate-700 hover:bg-slate-50">Fundamentos</a>
+            <a href="#caso-practico" class="block py-3 px-4 text-base text-slate-700 hover:bg-slate-50">Caso Práctico: Coca-Cola</a>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="hero" class="py-20 md:py-28 bg-white">
+            <div class="container mx-auto px-4 text-center">
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-800 leading-tight">
+                    Análisis y Optimización de Procesos
+                </h1>
+                <p class="mt-6 text-lg md:text-xl max-w-3xl mx-auto text-slate-600">
+                    Una exploración interactiva de los desafíos de la ingeniería de procesos y su aplicación práctica para lograr mejoras radicales en el rendimiento.
+                </p>
+                <div class="mt-10">
+                    <a href="#fundamentos" class="bg-teal-600 text-white font-bold py-3 px-8 rounded-full hover:bg-teal-700 transition-colors shadow-lg">
+                        Iniciar Exploración
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: Fundamentos -->
+        <section id="fundamentos" class="py-16 md:py-24 bg-slate-50 scroll-mt-20">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold text-slate-800">Fundamentos de la Ingeniería de Procesos</h2>
+                    <p class="mt-4 text-lg max-w-2xl mx-auto text-slate-600">
+                        Todo proyecto de mejora enfrenta desafíos. Aquí exploramos los 10 problemas más recurrentes que pueden comprometer el éxito de cualquier iniciativa de reingeniería.
+                    </p>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6" id="problemas-grid">
+                </div>
+
+                <div id="problema-detalle" class="mt-12 hidden bg-white p-8 rounded-xl shadow-md transition-all">
+                    <h3 id="detalle-titulo" class="text-2xl font-bold text-teal-700 mb-4"></h3>
+                    <p id="detalle-texto" class="text-slate-600 text-base leading-relaxed"></p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section 2: Caso Práctico -->
+        <section id="caso-practico" class="py-16 md:py-24 bg-white scroll-mt-20">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl md:text-4xl font-bold text-slate-800">Caso Práctico: The Coca-Cola Company</h2>
+                    <p class="mt-4 text-lg max-w-3xl mx-auto text-slate-600">
+                        Analizamos cómo una de las empresas más grandes del mundo aborda la optimización de procesos, transformando sus operaciones para mayor eficiencia y agilidad.
+                    </p>
+                </div>
+
+                <!-- Cadena de Valor -->
+                <div class="mb-20">
+                    <h3 class="text-2xl md:text-3xl font-bold text-center mb-10 text-slate-800">Análisis de la Cadena de Valor</h3>
+                    <p class="text-center max-w-3xl mx-auto mb-12 text-slate-600">El modelo de negocio de Coca-Cola se divide entre la compañía (TCCC), que crea el valor intangible de la marca y la fórmula, y los socios embotelladores, que crean el valor tangible al producir y distribuir el producto final. A continuación se visualiza esta dinámica.</p>
+
+                    <div class="relative max-w-6xl mx-auto p-4">
+                        <div class="space-y-4 mb-10">
+                             <h4 class="font-semibold text-lg text-slate-700 text-center bg-slate-200/60 py-2 rounded-md">Actividades de Apoyo</h4>
+                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                                 <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                                     <span class="font-semibold text-sm">Infraestructura</span>
+                                     <p class="text-xs text-slate-500 mt-1">Gestión global, calidad (TCQQS)</p>
+                                 </div>
+                                 <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                                     <span class="font-semibold text-sm">RR.HH.</span>
+                                      <p class="text-xs text-slate-500 mt-1">+700k empleados, Coca-Cola University</p>
+                                 </div>
+                                 <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                                     <span class="font-semibold text-sm">Tecnología</span>
+                                      <p class="text-xs text-slate-500 mt-1">I+D de bebidas, IA, Blockchain, ERP</p>
+                                 </div>
+                                 <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                                     <span class="font-semibold text-sm">Adquisiciones</span>
+                                     <p class="text-xs text-slate-500 mt-1">Compra de materias primas y equipos</p>
+                                 </div>
+                             </div>
+                        </div>
+
+                        <div class="w-full h-px bg-slate-300 my-6"></div>
+
+                        <h4 class="font-semibold text-lg text-slate-700 text-center bg-slate-200/60 py-2 rounded-md mb-4">Actividades Primarias</h4>
+                        <div class="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-2 text-center text-sm">
+                            <div class="w-full md:w-1/5 bg-white p-3 rounded-lg shadow-sm border border-teal-200">
+                                <span class="font-bold text-teal-700">Logística Entrada</span>
+                                <p class="text-xs text-slate-500 mt-1">Materias primas (fórmula, agua, envases)</p>
+                            </div>
+                             <div class="text-slate-400 font-bold text-2xl transform md:rotate-0 rotate-90">&rarr;</div>
+                            <div class="w-full md:w-1/5 bg-white p-3 rounded-lg shadow-sm border border-teal-200">
+                                <span class="font-bold text-teal-700">Operaciones</span>
+                                <p class="text-xs text-slate-500 mt-1">Fabricación de concentrado (TCCC), embotellado (Socios)</p>
+                            </div>
+                             <div class="text-slate-400 font-bold text-2xl transform md:rotate-0 rotate-90">&rarr;</div>
+                            <div class="w-full md:w-1/5 bg-white p-3 rounded-lg shadow-sm border border-teal-200">
+                                <span class="font-bold text-teal-700">Logística Salida</span>
+                                <p class="text-xs text-slate-500 mt-1">Distribución a millones de puntos de venta</p>
+                            </div>
+                             <div class="text-slate-400 font-bold text-2xl transform md:rotate-0 rotate-90">&rarr;</div>
+                             <div class="w-full md:w-1/5 bg-white p-3 rounded-lg shadow-sm border border-teal-200">
+                                <span class="font-bold text-teal-700">Marketing y Ventas</span>
+                                <p class="text-xs text-slate-500 mt-1">Campañas globales (TCCC) y ejecución local (Socios)</p>
+                            </div>
+                             <div class="text-slate-400 font-bold text-2xl transform md:rotate-0 rotate-90">&rarr;</div>
+                            <div class="w-full md:w-1/5 bg-white p-3 rounded-lg shadow-sm border border-teal-200">
+                                <span class="font-bold text-teal-700">Servicio</span>
+                                <p class="text-xs text-slate-500 mt-1">Soporte a minoristas y consumidores</p>
+                            </div>
+                        </div>
+
+                         <div class="mt-8 flex items-center justify-center">
+                            <div class="w-16 h-1 bg-teal-500"></div>
+                            <div class="mx-4 font-bold text-2xl text-teal-600">VALOR</div>
+                             <div class="w-16 h-1 bg-teal-500"></div>
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <!-- Clasificación de Actividades -->
+                <div class="mb-20">
+                    <h3 class="text-2xl md:text-3xl font-bold text-center mb-10 text-slate-800">Clasificación de Actividades</h3>
+                    <p class="text-center max-w-3xl mx-auto mb-12 text-slate-600">Identificar qué actividades aportan valor es el primer paso para la optimización. Las ineficiencias a menudo se encuentran en tareas que no aportan valor desde la perspectiva del cliente final.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div id="valor-crea" class="bg-teal-50 p-6 rounded-xl border border-teal-200">
+                            <h4 class="text-xl font-bold text-teal-800 mb-4 text-center">✅ Crea Valor</h4>
+                            <ul class="space-y-3 list-none text-slate-700"></ul>
+                        </div>
+                        <div id="valor-apoya" class="bg-sky-50 p-6 rounded-xl border border-sky-200">
+                            <h4 class="text-xl font-bold text-sky-800 mb-4 text-center">🤝 Apoya Valor</h4>
+                            <ul class="space-y-3 list-none text-slate-700"></ul>
+                        </div>
+                        <div id="valor-no-crea" class="bg-rose-50 p-6 rounded-xl border border-rose-200">
+                            <h4 class="text-xl font-bold text-rose-800 mb-4 text-center">❌ No Crea Valor</h4>
+                            <ul class="space-y-3 list-none text-slate-700"></ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Propuestas de Rediseño -->
+                <div class="mb-20">
+                    <h3 class="text-2xl md:text-3xl font-bold text-center mb-10 text-slate-800">Propuestas de Rediseño Radical</h3>
+                    <p class="text-center max-w-3xl mx-auto mb-12 text-slate-600">Eliminar las actividades que no aportan valor requiere un cambio fundamental. Estas son las tres propuestas clave implementadas por Coca-Cola para transformar sus operaciones.</p>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                         <div class="bg-white rounded-lg shadow-lg p-6 text-center border-t-4 border-teal-500">
+                            <div class="text-4xl mb-4">🔗</div>
+                            <h4 class="text-xl font-bold mb-2">Blockchain para Conciliación</h4>
+                            <p class="text-slate-600"><strong class="text-rose-600">Problema:</strong> Conciliación manual de pedidos, lenta (hasta 50 días) y propensa a errores. <br><strong class="text-teal-600">Solución:</strong> Un libro de contabilidad compartido y en tiempo real que automatiza la verificación y el pago.</p>
+                        </div>
+                         <div class="bg-white rounded-lg shadow-lg p-6 text-center border-t-4 border-sky-500">
+                            <div class="text-4xl mb-4">🤖</div>
+                            <h4 class="text-xl font-bold mb-2">IA para Planificación</h4>
+                            <p class="text-slate-600"><strong class="text-rose-600">Problema:</strong> Exceso de inventario por pronósticos de demanda imprecisos. <br><strong class="text-teal-600">Solución:</strong> Usar IA y análisis predictivo para optimizar el inventario y adoptar un modelo *Just-in-Time*.</p>
+                        </div>
+                         <div class="bg-white rounded-lg shadow-lg p-6 text-center border-t-4 border-amber-500">
+                            <div class="text-4xl mb-4">🏢</div>
+                            <h4 class="text-xl font-bold mb-2">ERP Unificado</h4>
+                            <p class="text-slate-600"><strong class="text-rose-600">Problema:</strong> "Silos de datos" por sistemas fragmentados, causando errores y reprocesos. <br><strong class="text-teal-600">Solución:</strong> Implementar una plataforma ERP única (SAP) para una visión unificada y en tiempo real de la operación.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Antes y Después -->
+                <div class="mb-20">
+                    <h3 class="text-2xl md:text-3xl font-bold text-center mb-10 text-slate-800">Transformación del Proceso: Antes y Después</h3>
+                    <p class="text-center max-w-3xl mx-auto mb-12 text-slate-600">El impacto más dramático se observa en la conciliación de pedidos. A continuación, se compara el flujo de trabajo manual y lento con el nuevo proceso automatizado y eficiente habilitado por la tecnología blockchain.</p>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                        <!-- Antes -->
+                        <div class="bg-rose-50 p-6 rounded-xl border-2 border-dashed border-rose-300">
+                            <h4 class="text-xl font-bold text-rose-800 mb-6 text-center">Flujo "Antes" (Manual)</h4>
+                            <div class="space-y-3 text-sm">
+                                <div class="flex items-center"><span class="w-8 h-8 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center font-bold mr-3">1</span> <span>Emisor crea y envía Orden de Compra.</span></div>
+                                <div class="ml-5 text-xl text-rose-400">↓</div>
+                                <div class="flex items-center"><span class="w-8 h-8 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center font-bold mr-3">2</span> <span>Receptor registra la OC manualmente.</span></div>
+                                <div class="ml-5 text-xl text-rose-400">↓</div>
+                                <div class="flex items-center"><span class="w-8 h-8 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center font-bold mr-3">3</span> <span>Receptor envía producto y factura.</span></div>
+                                <div class="ml-5 text-xl text-rose-400">↓</div>
+                                <div class="flex items-start"><span class="w-8 h-8 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center font-bold mr-3 flex-shrink-0">4</span> <span class="font-semibold text-rose-900">Inicia conciliación manual (Orden vs. Recibo vs. Factura).</span></div>
+                                <div class="ml-5 text-xl text-rose-400">↓</div>
+                                <div class="flex items-start"><span class="w-8 h-8 rounded-full bg-rose-500 text-white flex items-center justify-center font-bold mr-3 flex-shrink-0">!</span> <span class="bg-white p-2 rounded-md shadow-inner">Bucle de verificación y disputas. Múltiples emails y llamadas. <strong class="block mt-1">Tiempo: Hasta 50 días.</strong></span></div>
+                            </div>
+                        </div>
+                        <!-- Después -->
+                        <div class="bg-teal-50 p-6 rounded-xl border-2 border-dashed border-teal-300">
+                            <h4 class="text-xl font-bold text-teal-800 mb-6 text-center">Flujo "Después" (Blockchain)</h4>
+                             <div class="space-y-4 text-sm">
+                                <div class="flex items-center"><span class="w-8 h-8 rounded-full bg-teal-200 text-teal-700 flex items-center justify-center font-bold mr-3">1</span> <span>Se crea un "Contrato Inteligente" en la red compartida.</span></div>
+                                 <div class="ml-5 text-xl text-teal-400">↓</div>
+                                <div class="flex items-center"><span class="w-8 h-8 rounded-full bg-teal-200 text-teal-700 flex items-center justify-center font-bold mr-3">2</span> <span>Cada evento (envío, recepción) se registra automáticamente.</span></div>
+                                 <div class="ml-5 text-xl text-teal-400">↓</div>
+                                <div class="flex items-start"><span class="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center font-bold mr-3 flex-shrink-0">✓</span> <span class="font-semibold text-teal-900">El contrato se auto-verifica en tiempo real.</span></div>
+                                 <div class="ml-5 text-xl text-teal-400">↓</div>
+                                <div class="flex items-start"><span class="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center font-bold mr-3 flex-shrink-0">💸</span> <span class="bg-white p-2 rounded-md shadow-inner">El pago se ejecuta automáticamente al cumplirse las condiciones. <strong class="block mt-1">Tiempo: Menos de 7 días.</strong></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart -->
+                    <div class="mt-16">
+                        <h4 class="text-xl font-bold text-slate-800 mb-6 text-center">Impacto Cuantificado: Reducción del Tiempo de Ciclo</h4>
+                        <div class="chart-container">
+                            <canvas id="impactoChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagrama Ishikawa -->
+                <div class="mb-20">
+                     <h3 class="text-2xl md:text-3xl font-bold text-center mb-10 text-slate-800">Análisis de Causa y Efecto</h3>
+                    <p class="text-center max-w-3xl mx-auto mb-12 text-slate-600">El diagrama de Ishikawa (o espina de pescado) ayuda a visualizar cómo múltiples causas raíz en diferentes áreas contribuyen a un problema central. Esto demuestra por qué se necesitan soluciones integrales en lugar de parches.</p>
+                    
+                    <div class="bg-slate-50 p-4 sm:p-8 rounded-xl border border-slate-200 min-h-[400px] flex items-center justify-center overflow-x-auto">
+                        <div class="relative w-full max-w-4xl min-w-[600px] h-80">
+                            <!-- Main Spine -->
+                            <div class="ishikawa-line h-1 top-1/2 left-0 right-16"></div>
+                            <div class="absolute top-1/2 right-12 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-l-[16px] border-l-slate-600" style="transform: translateY(-50%);"></div>
+                            
+                            <!-- Effect -->
+                            <div class="absolute top-1/2 right-0 -translate-y-1/2 bg-rose-100 text-rose-800 p-3 rounded-md font-bold text-center text-sm shadow">Largos Tiempos de Ciclo en la Cadena de Suministro</div>
+
+                            <!-- Bones -->
+                            <div class="absolute top-8 left-8 w-[35%] h-0.5 ishikawa-line ishikawa-bone" style="transform: rotate(45deg);">
+                                <span class="absolute -top-6 left-0 text-sm font-semibold text-slate-800">Métodos</span>
+                                <span class="absolute top-1 -right-2 text-xs text-slate-500 transform -rotate-45 block w-40">Conciliación manual</span>
+                            </div>
+                            <div class="absolute bottom-8 left-8 w-[35%] h-0.5 ishikawa-line ishikawa-bone" style="transform: rotate(-45deg);">
+                                <span class="absolute top-4 left-0 text-sm font-semibold text-slate-800">Máquinas</span>
+                                <span class="absolute -bottom-1 -right-2 text-xs text-slate-500 transform rotate-45 block w-40">Sistemas TI fragmentados</span>
+                            </div>
+                            <div class="absolute top-8 right-[35%] w-[35%] h-0.5 ishikawa-line ishikawa-bone" style="transform: rotate(135deg);">
+                                <span class="absolute -top-6 -right-16 text-sm font-semibold text-slate-800">Mano de Obra</span>
+                                 <span class="absolute top-1 left-2 text-xs text-slate-500 transform -rotate-[135deg] block w-40 text-right">Toma de decisiones reactiva</span>
+                            </div>
+                            <div class="absolute bottom-8 right-[35%] w-[35%] h-0.5 ishikawa-line ishikawa-bone" style="transform: rotate(-135deg);">
+                                <span class="absolute top-4 -right-14 text-sm font-semibold text-slate-800">Medición</span>
+                                <span class="absolute -bottom-1 left-2 text-xs text-slate-500 transform rotate-[-135deg] block w-40 text-right">KPIs medidos con retraso</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <!-- Aplicación Seis Sigma -->
+                <div class="mb-10">
+                    <h3 class="text-2xl md:text-3xl font-bold text-center mb-10 text-slate-800">Aplicación del Modelo Seis Sigma</h3>
+                    <p class="text-center max-w-3xl mx-auto mb-12 text-slate-600">Mientras la reingeniería transforma procesos a gran escala, Seis Sigma se enfoca en optimizar y controlar procesos específicos para reducir la variabilidad y eliminar defectos. Estas son dos áreas ideales para su aplicación.</p>
+
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-white rounded-xl shadow-lg p-8 border-l-4 border-sky-500">
+                             <h4 class="text-xl font-bold mb-3 text-sky-800">Proceso de Embotellado y Envasado</h4>
+                             <p class="text-slate-600 mb-4">Un proceso de manufactura de altísimo volumen donde la consistencia es clave. Seis Sigma puede optimizar:</p>
+                            <ul class="list-disc list-inside space-y-2 text-slate-600">
+                                <li><strong>Volumen de llenado:</strong> Asegurar la cantidad exacta de producto.</li>
+                                <li><strong>Nivel de carbonatación:</strong> Garantizar el sabor consistente.</li>
+                                <li><strong>Sellado del envase:</strong> Prevenir fugas y mantener la frescura.</li>
+                            </ul>
+                        </div>
+                         <div class="bg-white rounded-xl shadow-lg p-8 border-l-4 border-amber-500">
+                             <h4 class="text-xl font-bold mb-3 text-amber-800">Logística de Última Milla</h4>
+                             <p class="text-slate-600 mb-4">La eficiencia en la entrega final impacta la satisfacción del cliente y la rentabilidad. Seis Sigma puede reducir:</p>
+                            <ul class="list-disc list-inside space-y-2 text-slate-600">
+                                <li><strong>Variabilidad en tiempos de entrega:</strong> Cumplir las ventanas de tiempo.</li>
+                                <li><strong>Errores en pedidos:</strong> Asegurar entregas correctas y sin daños.</li>
+                                <li><strong>Costos de combustible:</strong> Optimizar rutas de distribución.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Conclusion Section -->
+        <section class="py-16 md:py-24 bg-slate-800 text-white">
+            <div class="container mx-auto px-4 text-center">
+                 <h2 class="text-3xl md:text-4xl font-bold">Conclusión: La Mejora es un Viaje Continuo</h2>
+                    <p class="mt-6 text-lg md:text-xl max-w-3xl mx-auto text-slate-300">
+                        El caso de Coca-Cola demuestra que la optimización de procesos no es un proyecto único, sino una filosofía de mejora continua. La clave del éxito reside en la integración de una estrategia clara, procesos eficientes, tecnología habilitadora y, lo más importante, personas comprometidas con el cambio.
+                    </p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-8">
+        <div class="container mx-auto px-4 text-center text-sm">
+            <p class="font-semibold text-slate-300">Hecho por Jose Garza con Matrícula AL07044692</p>
+            <p class="mt-2">&copy; 2025 Análisis de Ingeniería de Procesos. Creado como un proyecto educativo.</p>
+            <p class="mt-2 text-xs text-slate-500">Esta página fue desarrollada únicamente para fines educativos como parte de un proyecto para la Universidad Tecmilenio. La información y el caso de estudio son para fines ilustrativos.</p>
+        </div>
+    </footer>
+    
+    <!-- Scroll to top button -->
+    <button id="scrollToTopBtn" class="hidden fixed bottom-5 right-5 bg-teal-600 hover:bg-teal-700 text-white font-bold p-3 rounded-full shadow-lg transition-opacity">
+       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+        </svg>
+    </button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Data
+            const problemas = [
+                { id: 1, titulo: "Mala Planificación", texto: "Definición de plazos poco realistas y asignación incorrecta de recursos, lo que lleva a retrasos y sobrecostos." },
+                { id: 2, titulo: "Falta de Comunicación", texto: "Ausencia de intercambio de información efectiva entre equipos y departamentos, generando malentendidos y duplicación de esfuerzos." },
+                { id: 3, titulo: "Resistencia al Cambio", texto: "Reacción natural de los empleados por temor a lo desconocido, magnificada por la falta de apoyo de la alta dirección." },
+                { id: 4, titulo: "Enfoque en Herramientas", texto: "Creer que la tecnología por sí sola resolverá problemas, ignorando la cultura y las ineficiencias subyacentes." },
+                { id: 5, titulo: "Falta de Estandarización", texto: "Ausencia de estándares de calidad claros, lo que conduce a productos defectuosos, reprocesos y desperdicio." },
+                { id: 6, titulo: "Ineficiencias Operativas", texto: "Cuellos de botella y 'desperdicios' (transporte, inventario, etc.) que consumen recursos sin aportar valor." },
+                { id: 7, titulo: "Falta de Visibilidad", texto: "Incapacidad para monitorear procesos en tiempo real, lo que impide una toma de decisiones ágil y proactiva." },
+                { id: 8, titulo: "Mala Gestión de Suministro", texto: "Problemas con proveedores y mala gestión de inventarios que provocan paradas en la producción." },
+                { id: 9, titulo: "Objetivos Poco Claros", texto: "Abordar proyectos sin una estrategia y metas bien definidas, haciendo imposible medir el éxito." },
+                { id: 10, titulo: "Validación Insuficiente", texto: "Omitir o realizar pruebas superficiales antes de la implementación, acarreando fallos graves." }
+            ];
+
+            const actividadesValor = {
+                crea: [
+                    "Desarrollo de la fórmula secreta y nuevas bebidas",
+                    "Fabricación del concentrado y jarabe (TCCC)",
+                    "Creación de campañas de marketing global",
+                    "Embotellado y envasado del producto final"
+                ],
+                apoya: [
+                    "Control de calidad de agua y producto final",
+                    "Logística y distribución a puntos de venta",
+                    "Planificación de la demanda y suministro",
+                    "Mantenimiento preventivo de maquinaria",
+                    "Formación y desarrollo de empleados",
+                    "Gestión de relaciones con proveedores"
+                ],
+                noCrea: [
+                    "Conciliación manual de pedidos y pagos",
+                    "Almacenamiento de exceso de inventario",
+                    "Tiempos de espera por falta de materias primas",
+                    "Reprocesamiento de pedidos por errores",
+                    "Burocracia y aprobaciones manuales",
+                    "Transportes innecesarios en planta"
+                ]
+            };
+
+            // Mobile menu toggle
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            // Close mobile menu on link click
+            document.querySelectorAll('#mobile-menu a').forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.add('hidden');
+                });
+            });
+
+            // Populate Problemas Grid
+            const problemasGrid = document.getElementById('problemas-grid');
+            problemas.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-6 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all cursor-pointer';
+                card.dataset.id = p.id;
+                card.innerHTML = `<h3 class="font-bold text-lg text-slate-800">${p.titulo}</h3>`;
+                problemasGrid.appendChild(card);
+            });
+
+            // Handle Problema Click
+            const detalleContainer = document.getElementById('problema-detalle');
+            const detalleTitulo = document.getElementById('detalle-titulo');
+            const detalleTexto = document.getElementById('detalle-texto');
+            let activeCard = null;
+
+            problemasGrid.addEventListener('click', e => {
+                const card = e.target.closest('div');
+                if (card && card.dataset.id) {
+                    const problemaId = parseInt(card.dataset.id);
+                    const problema = problemas.find(p => p.id === problemaId);
+                    
+                    if (activeCard === card) {
+                        detalleContainer.classList.add('hidden');
+                        card.classList.remove('ring-2', 'ring-teal-500');
+                        activeCard = null;
+                    } else {
+                        detalleTitulo.textContent = problema.titulo;
+                        detalleTexto.textContent = problema.texto;
+                        detalleContainer.classList.remove('hidden');
+                        if (activeCard) {
+                            activeCard.classList.remove('ring-2', 'ring-teal-500');
+                        }
+                        card.classList.add('ring-2', 'ring-teal-500');
+                        activeCard = card;
+                    }
+                }
+            });
+
+            // Populate Valor Lists
+            const creaList = document.querySelector('#valor-crea ul');
+            const apoyaList = document.querySelector('#valor-apoya ul');
+            const noCreaList = document.querySelector('#valor-no-crea ul');
+
+            actividadesValor.crea.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'flex items-start';
+                li.innerHTML = `<span class="mr-2 mt-1 text-teal-600">✅</span> <span>${item}</span>`;
+                creaList.appendChild(li);
+            });
+            actividadesValor.apoya.forEach(item => {
+                const li = document.createElement('li');
+                 li.className = 'flex items-start';
+                li.innerHTML = `<span class="mr-2 mt-1 text-sky-600">🤝</span> <span>${item}</span>`;
+                apoyaList.appendChild(li);
+            });
+            actividadesValor.noCrea.forEach(item => {
+                const li = document.createElement('li');
+                 li.className = 'flex items-start';
+                li.innerHTML = `<span class="mr-2 mt-1 text-rose-600">❌</span> <span>${item}</span>`;
+                noCreaList.appendChild(li);
+            });
+
+            // Chart.js implementation
+            const ctx = document.getElementById('impactoChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Proceso "Antes" (Manual)', 'Proceso "Después" (Blockchain)'],
+                    datasets: [{
+                        label: 'Tiempo de Ciclo (Días)',
+                        data: [50, 7],
+                        backgroundColor: [
+                            'rgba(251, 113, 133, 0.6)', // rose-400
+                            'rgba(20, 184, 166, 0.6)'  // teal-500
+                        ],
+                        borderColor: [
+                            'rgb(251, 113, 133)',
+                            'rgb(20, 184, 166)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Días'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.dataset.label}: ${context.raw} días`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Scroll to top button
+            const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    scrollToTopBtn.classList.remove('hidden');
+                } else {
+                    scrollToTopBtn.classList.add('hidden');
+                }
+            });
+            scrollToTopBtn.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            // Active nav link on scroll
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('header nav a');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if(link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px"});
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>
